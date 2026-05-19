@@ -4,9 +4,11 @@ import Link from "next/link";
 
 export default async function ProductionPage() {
   const session = await auth();
-  const userId = parseInt(session!.user.id);
+  if (!session) return <div className="text-center py-20 text-gray-400">请先登录</div>;
+  const userId = parseInt(session.user.id);
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return <div className="text-center py-20 text-gray-400">用户不存在</div>;
 
   const where: any = {
     status: { in: ["pending", "in_progress"] },

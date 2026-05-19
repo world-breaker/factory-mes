@@ -1,0 +1,237 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========== 用户 & 权限 ==========
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  name      String
+  role      String   @default("operator") // admin / supervisor / operator
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  assignedLine   Int? // ProductionLine id
+  workOrders     WorkOrder[]        @relation("WorkOrderCreator")
+  processRecords ProductionRecord[] @relation("ProcessOperator")
+  qualityRecords QualityRecord[]    @relation("QualityInspector")
+  workProcesses  WorkOrderProcess[] @relation("ProcessOperator")
+}
+
+// ========== 产线/车间 ==========
+model ProductionLine {
+  id          Int      @id @default(autoincrement())
+  name        String
+  code        String   @unique
+  description String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  workOrders WorkOrder[]
+}
+
+// ========== 产品/半成品 ==========
+model Product {
+  id            Int      @id @default(autoincrement())
+  name          String
+  code          String   @unique // 产品编码
+  specification String? // 规格
+  unit          String   @default("个") // 单位
+  material      String? // 材质
+  imageUrl      String?
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  workOrders WorkOrder[]
+  bomItems   BomItem[]
+  templates  ProcessTemplate[]
+}
+
+// ========== 物料管理 ==========
+model Material {
+  id            Int      @id @default(autoincrement())
+  name          String
+  code          String   @unique // 物料编码
+  specification String?
+  unit          String   @default("个")
+  category      String? // 原材料/辅料/包装等
+  minStock      Float?   @default(0) // 最低库存预警
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  inventory    Inventory[]
+  bomItems     BomItem[]
+  inOutRecords MaterialRecord[]
+}
+
+model Inventory {
+  id         Int      @id @default(autoincrement())
+  materialId Int
+  quantity   Float    @default(0)
+  batchNo    String? // 批次号
+  location   String? // 库位
+  updatedAt  DateTime @updatedAt
+
+  material Material @relation(fields: [materialId], references: [id])
+}
+
+model MaterialRecord {
+  id          Int      @id @default(autoincrement())
+  materialId  Int
+  type        String // in:入库 out:出库
+  quantity    Float
+  batchNo     String?
+  workOrderId Int? // 关联工单
+  operatorId  Int?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  material  Material   @relation(fields: [materialId], references: [id])
+  workOrder WorkOrder? @relation(fields: [workOrderId], references: [id])
+}
+
+// ========== 工艺模板 ==========
+model ProcessTemplate {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  productId   Int?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  product Product?      @relation(fields: [productId], references: [id])
+  steps   ProcessStep[]
+}
+
+model ProcessStep {
+  id                   Int      @id @default(autoincrement())
+  templateId           Int
+  stepOrder            Int
+  name                 String
+  description          String?
+  durationMinutes      Int? // 标准工时(分钟)
+  qualityCheckRequired Boolean  @default(false)
+  createdAt            DateTime @default(now())
+
+  template      ProcessTemplate     @relation(fields: [templateId], references: [id])
+  workProcesses WorkOrderProcess[]
+  checkpoints   QualityCheckpoint[]
+}
+
+// ========== 工单管理 ==========
+model WorkOrder {
+  id             Int       @id @default(autoincrement())
+  orderNo        String    @unique // 工单编号
+  productId      Int
+  quantity       Int // 计划数量
+  quantityDone   Int       @default(0)
+  quantityDefect Int       @default(0)
+  status         String    @default("pending") // pending:待生产 in_progress:生产中 completed:已完成 cancelled:已取消
+  priority       String    @default("normal") // low/normal/high/urgent
+  dueDate        DateTime?
+  notes          String?
+  createdById    Int
+  assignedLineId Int? // 分配到产线
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  product         Product            @relation(fields: [productId], references: [id])
+  creator         User               @relation("WorkOrderCreator", fields: [createdById], references: [id])
+  assignedLine    ProductionLine?    @relation(fields: [assignedLineId], references: [id])
+  processes       WorkOrderProcess[]
+  prodRecords     ProductionRecord[]
+  qualityRecords  QualityRecord[]
+  materialRecords MaterialRecord[]
+}
+
+model WorkOrderProcess {
+  id          Int       @id @default(autoincrement())
+  workOrderId Int
+  stepId      Int?
+  stepOrder   Int
+  stepName    String
+  status      String    @default("pending") // pending/in_progress/completed/skipped
+  operatorId  Int?
+  startedAt   DateTime?
+  completedAt DateTime?
+  notes       String?
+
+  workOrder   WorkOrder          @relation(fields: [workOrderId], references: [id])
+  step        ProcessStep?       @relation(fields: [stepId], references: [id])
+  operator    User?              @relation("ProcessOperator", fields: [operatorId], references: [id])
+  prodRecords ProductionRecord[]
+}
+
+// ========== 生产报工 ==========
+model ProductionRecord {
+  id             Int       @id @default(autoincrement())
+  workOrderId    Int
+  processId      Int?
+  operatorId     Int
+  quantityGood   Int       @default(0) // 良品数
+  quantityDefect Int       @default(0) // 不良品数
+  startTime      DateTime?
+  endTime        DateTime?
+  notes          String?
+  createdAt      DateTime  @default(now())
+
+  workOrder WorkOrder         @relation(fields: [workOrderId], references: [id])
+  process   WorkOrderProcess? @relation(fields: [processId], references: [id])
+  operator  User              @relation("ProcessOperator", fields: [operatorId], references: [id])
+}
+
+// ========== 质量管理 ==========
+model QualityCheckpoint {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  stepId      Int? // 关联工序步骤
+  checkType   String   @default("visual") // visual:目检 dimensional:尺寸 measurement:测量 functional:功能
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  step    ProcessStep?    @relation(fields: [stepId], references: [id])
+  records QualityRecord[]
+}
+
+model QualityRecord {
+  id           Int      @id @default(autoincrement())
+  workOrderId  Int
+  processId    Int?
+  checkpointId Int?
+  inspectorId  Int
+  result       String   @default("pass") // pass/fail/na
+  defectType   String? // 缺陷类型
+  defectQty    Int      @default(0)
+  defectDesc   String?
+  imageUrl     String?
+  createdAt    DateTime @default(now())
+
+  checkpoint QualityCheckpoint? @relation(fields: [checkpointId], references: [id])
+  workOrder  WorkOrder          @relation(fields: [workOrderId], references: [id])
+  inspector  User               @relation("QualityInspector", fields: [inspectorId], references: [id])
+}
+
+// ========== BOM (物料清单) ==========
+model BomItem {
+  id         Int     @id @default(autoincrement())
+  productId  Int
+  materialId Int
+  quantity   Float // 用量
+  unit       String  @default("个")
+  notes      String?
+
+  product  Product  @relation(fields: [productId], references: [id])
+  material Material @relation(fields: [materialId], references: [id])
+
+  @@unique([productId, materialId])
+}

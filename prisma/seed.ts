@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { seedDataMain } from "./seed-data";
 
 const prisma = new PrismaClient();
 
@@ -125,6 +126,14 @@ async function main() {
     },
   });
   console.log(`Created process template: ${template.name}`);
+
+  console.log("\n🎲 Generating random test data...");
+  try {
+    await seedDataMain();
+    console.log("🎲 Random test data generated successfully!");
+  } catch (err) {
+    console.warn("⚠️  Seed data generation skipped or failed (non-critical):", (err as Error).message);
+  }
 
   console.log("Seeding completed!");
 }

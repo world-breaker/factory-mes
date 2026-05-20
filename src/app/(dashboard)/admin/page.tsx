@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { DeleteButton } from "./delete-btn";
 
 export default async function AdminPage() {
   const session = await auth();
@@ -66,6 +67,7 @@ export default async function AdminPage() {
                 <th>姓名</th>
                 <th>角色</th>
                 <th>状态</th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody>
@@ -86,6 +88,13 @@ export default async function AdminPage() {
                     <span className={`status-badge ${u.active ? "status-badge-completed" : "bg-gray-100 text-gray-500"}`}>
                       {u.active ? "正常" : "已禁用"}
                     </span>
+                  </td>
+                  <td>
+                    {parseInt(session.user.id as string) !== u.id ? (
+                      <DeleteButton id={u.id} apiPath={`/api/users/${u.id}`} />
+                    ) : (
+                      <span className="text-xs text-gray-400">当前用户</span>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -119,6 +128,7 @@ export default async function AdminPage() {
                 <th>单位</th>
                 <th>工单数</th>
                 <th>状态</th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody>
@@ -133,10 +143,17 @@ export default async function AdminPage() {
                       {p.active ? "启用" : "停用"}
                     </span>
                   </td>
+                  <td>
+                    {p.active ? (
+                      <DeleteButton id={p.id} apiPath={`/api/products/${p.id}`} label="停用" />
+                    ) : (
+                      <span className="text-xs text-gray-400">已停用</span>
+                    )}
+                  </td>
                 </tr>
               ))}
               {products.length === 0 && (
-                <tr><td colSpan={5} className="text-center py-10 text-gray-400">暂无产品</td></tr>
+                <tr><td colSpan={6} className="text-center py-10 text-gray-400">暂无产品</td></tr>
               )}
             </tbody>
           </table>

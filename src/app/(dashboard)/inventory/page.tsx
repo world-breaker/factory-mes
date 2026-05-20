@@ -190,12 +190,27 @@ export default function InventoryPage() {
                         </td>
                         <td className="text-gray-400 text-xs">{item.batchNo || "-"}</td>
                         <td>
-                          <button
-                            onClick={() => { setForm({ ...form, materialId: String(item.materialId) }); setShowIn(true); }}
-                            className="text-xs text-blue-600 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg font-medium transition"
-                          >
-                            入库
-                          </button>
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => { setForm({ ...form, materialId: String(item.materialId) }); setShowIn(true); }}
+                              className="text-xs text-blue-600 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg font-medium transition"
+                            >
+                              入库
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (!confirm("确认停用此物料？")) return;
+                                try {
+                                  const res = await fetch(`/api/materials/${item.materialId}`, { method: "DELETE" });
+                                  if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
+                                  fetchData();
+                                } catch (err: any) { alert("操作失败: " + err.message); }
+                              }}
+                              className="text-xs text-red-500 hover:bg-red-50 px-2.5 py-1.5 rounded-lg font-medium transition"
+                            >
+                              停用
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))

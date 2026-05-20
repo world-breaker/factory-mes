@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import QualityModal from "./actions";
+import { DeleteButton } from "../admin/delete-btn";
 
 export default async function QualityPage({
   searchParams,
@@ -149,12 +150,13 @@ export default async function QualityPage({
                 <th>不良数量</th>
                 <th>检验员</th>
                 <th>时间</th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody>
               {records.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-16 text-gray-400">暂无质检记录</td>
+                  <td colSpan={8} className="text-center py-16 text-gray-400">暂无质检记录</td>
                 </tr>
               ) : (
                 records.map((r) => (
@@ -173,6 +175,9 @@ export default async function QualityPage({
                     <td className={r.defectQty ? "font-medium text-red-500" : ""}>{r.defectQty || "-"}</td>
                     <td className="text-gray-600">{r.inspector.name}</td>
                     <td className="text-gray-400 text-xs">{new Date(r.createdAt).toLocaleString("zh-CN")}</td>
+                    <td>
+                      <DeleteButton id={r.id} apiPath={`/api/quality/${r.id}`} confirmMsg="确认删除此质检记录？" />
+                    </td>
                   </tr>
                 ))
               )}

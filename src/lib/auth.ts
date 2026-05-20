@@ -1,7 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import { prisma } from "./prisma";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production",
@@ -14,6 +13,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.username || !credentials?.password) return null;
+
+        // 懒加载 prisma，避免在 Edge Runtime 初始化
+        const { prisma } = await import("./prisma");
 
         const user = await prisma.user.findUnique({
           where: { username: credentials.username as string },

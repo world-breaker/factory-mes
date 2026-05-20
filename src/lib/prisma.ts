@@ -4,21 +4,36 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
+// 判断是否在 Edge Runtime 中
+function isEdgeRuntime() {
+  return typeof (globalThis as any).EdgeRuntime !== "undefined";
+}
+
+function createPrismaProxy() {
+  return new Proxy({} as PrismaClient, {
+    get(_target, prop) {
+      if (prop === "$connect" || prop === "$disconnect" || prop === "$on" || prop === "$use" || prop === "$extends") {
+        return () => Promise.resolve();
+      }
+      return () => {
+        console.warn("PrismaClient not available (edge runtime or build)");
+        return Promise.resolve([]);
+      };
+    },
+  });
+}
+
 function createPrismaClient() {
-  // 构建时不需要真正连接数据库，返回空代理避免报错
-  if (!process.env.DATABASE_URL) {
-    return new Proxy({} as PrismaClient, {
-      get(target, prop) {
-        if (prop === "$connect" || prop === "$disconnect" || prop === "$on" || prop === "$use" || prop === "$extends") {
-          return () => Promise.resolve();
-        }
-        return () => {
-          console.warn("PrismaClient not available during build");
-          return Promise.resolve([]);
-        };
-      },
-    });
+  // Edge Runtime 不支持 PrismaClient（Node.js API）
+  if (isEdgeRuntime()) {
+    return createPrismaProxy();
   }
+
+  // 无数据库连接时返回代理
+  if (!process.env.DATABASE_URL) {
+    return createPrismaProxy();
+  }
+
   return new PrismaClient();
 }
 

@@ -1,6 +1,6 @@
 {
   "framework": "nextjs",
-  "buildCommand": "npm run build",
+  "buildCommand": "bash vercel-build.sh",
   "outputDirectory": ".next",
   "installCommand": "npm install",
   "regions": ["sin1"]

@@ -14,8 +14,13 @@ export default async function ProductionPage() {
     status: { in: ["pending", "in_progress"] },
   };
 
-  if (user?.role === "operator" && user.assignedLine) {
-    where.assignedLineId = user.assignedLine;
+  if (user?.role === "operator") {
+    if (user.assignedLine) {
+      where.assignedLineId = user.assignedLine;
+    }
+    if (user.workTypeId) {
+      where.workTypeId = user.workTypeId;
+    }
   }
 
   const orders = await prisma.workOrder.findMany({

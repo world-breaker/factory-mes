@@ -29,11 +29,17 @@ export default async function WorkOrdersPage({
     where.status = params.status;
   }
 
+  // Operator can only see orders matching their work type
+  if (session?.user?.role === "operator") {
+    if (session.user.workTypeId) where.workTypeId = session.user.workTypeId;
+  }
+
   const orders = await prisma.workOrder.findMany({
     where,
     include: {
       product: { select: { name: true, code: true } },
       assignedLine: { select: { name: true } },
+      workType: { select: { name: true } },
       creator: { select: { name: true } },
     },
     orderBy: [{ priority: "asc" }, { createdAt: "desc" }],
@@ -41,10 +47,10 @@ export default async function WorkOrdersPage({
   });
 
   const stats = await Promise.all([
-    prisma.workOrder.count(),
-    prisma.workOrder.count({ where: { status: "pending" } }),
-    prisma.workOrder.count({ where: { status: "in_progress" } }),
-    prisma.workOrder.count({ where: { status: "completed" } }),
+    prisma.workOrder.count({ where: session?.user?.role === "operator" && session.user.workTypeId ? { workTypeId: session.user.workTypeId } : {} }),
+    prisma.workOrder.count({ where: { ...(session?.user?.role === "operator" && session.user.workTypeId ? { workTypeId: session.user.workTypeId } : {}), status: "pending" } }),
+    prisma.workOrder.count({ where: { ...(session?.user?.role === "operator" && session.user.workTypeId ? { workTypeId: session.user.workTypeId } : {}), status: "in_progress" } }),
+    prisma.workOrder.count({ where: { ...(session?.user?.role === "operator" && session.user.workTypeId ? { workTypeId: session.user.workTypeId } : {}), status: "completed" } }),
   ]);
 
   const tabs = [
@@ -161,6 +167,14 @@ export default async function WorkOrdersPage({
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                         </svg>
                         {order.assignedLine.name}
+                      </span>
+                    )}
+                    {order.workType && (
+                      <span className="flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        {order.workType.name}
                       </span>
                     )}
                     <span>{order.creator.name}</span>

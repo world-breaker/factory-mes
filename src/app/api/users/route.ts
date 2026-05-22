@@ -18,7 +18,9 @@ export async function GET() {
       role: true,
       active: true,
       assignedLine: true,
+      workTypeId: true,
       createdAt: true,
+      workType: { select: { id: true, name: true } },
     },
   });
 
@@ -33,7 +35,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { username, password, name, role } = body;
+    const { username, password, name, role, workTypeId, assignedLine } = body;
 
     if (!username || !password || !name) {
       return NextResponse.json(
@@ -59,6 +61,8 @@ export async function POST(request: Request) {
         password: hashedPassword,
         name,
         role: role || "operator",
+        workTypeId: workTypeId || null,
+        assignedLine: assignedLine || null,
       },
       select: {
         id: true,
@@ -66,6 +70,8 @@ export async function POST(request: Request) {
         name: true,
         role: true,
         active: true,
+        workTypeId: true,
+        assignedLine: true,
         createdAt: true,
       },
     });

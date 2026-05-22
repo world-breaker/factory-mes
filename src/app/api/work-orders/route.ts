@@ -35,7 +35,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { productId, quantity, priority, dueDate, notes, assignedLineId } = body;
+    const { productId, quantity, priority, dueDate, notes, assignedLineId, workTypeId } = body;
 
     if (!productId || !quantity) {
       return NextResponse.json({ error: "产品和数量为必填项" }, { status: 400 });
@@ -58,6 +58,7 @@ export async function POST(request: Request) {
         dueDate: dueDate ? new Date(dueDate) : null,
         notes,
         assignedLineId: assignedLineId ? parseInt(assignedLineId) : null,
+        workTypeId: workTypeId ? parseInt(workTypeId) : null,
         createdById: parseInt(session.user.id),
       },
     });

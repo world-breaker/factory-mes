@@ -4,12 +4,16 @@ declare module "next-auth" {
   interface User {
     role?: string;
     username?: string;
+    workTypeId?: number | null;
+    assignedLine?: number | null;
   }
   interface Session {
     user: {
       id: string;
       role: string;
       username: string;
+      workTypeId?: number | null;
+      assignedLine?: number | null;
     } & DefaultSession["user"];
   }
 }

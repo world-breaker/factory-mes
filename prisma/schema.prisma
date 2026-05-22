@@ -3,8 +3,21 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
+}
+
+// ========== 工种 ==========
+model WorkType {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique // 工种名称: 冲压工/焊工/装配工...
+  code      String   @unique
+  description String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  users     User[]
+  workOrders WorkOrder[]
 }
 
 // ========== 用户 & 权限 ==========
@@ -20,10 +33,13 @@ model User {
 
   // Relations
   assignedLine   Int? // ProductionLine id
+  workTypeId     Int? // 工种
   workOrders     WorkOrder[]        @relation("WorkOrderCreator")
   processRecords ProductionRecord[] @relation("ProcessOperator")
   qualityRecords QualityRecord[]    @relation("QualityInspector")
   workProcesses  WorkOrderProcess[] @relation("ProcessOperator")
+
+  workType WorkType? @relation(fields: [workTypeId], references: [id])
 }
 
 // ========== 产线/车间 ==========
@@ -68,7 +84,6 @@ model Material {
   createdAt     DateTime @default(now())
 
   inventory    Inventory[]
-  bomItems     BomItem[]
   inOutRecords MaterialRecord[]
 }
 
@@ -140,6 +155,7 @@ model WorkOrder {
   notes          String?
   createdById    Int
   assignedLineId Int? // 分配到产线
+  workTypeId     Int? // 所需工种(用于操作工数据隔离)
   completedAt    DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -147,6 +163,7 @@ model WorkOrder {
   product         Product            @relation(fields: [productId], references: [id])
   creator         User               @relation("WorkOrderCreator", fields: [createdById], references: [id])
   assignedLine    ProductionLine?    @relation(fields: [assignedLineId], references: [id])
+  workType        WorkType?          @relation(fields: [workTypeId], references: [id])
   processes       WorkOrderProcess[]
   prodRecords     ProductionRecord[]
   qualityRecords  QualityRecord[]
@@ -221,17 +238,19 @@ model QualityRecord {
   inspector  User               @relation("QualityInspector", fields: [inspectorId], references: [id])
 }
 
-// ========== BOM (物料清单) ==========
+// ========== BOM (物料清单 - 无限层级树形结构) ==========
 model BomItem {
-  id         Int     @id @default(autoincrement())
-  productId  Int
-  materialId Int
-  quantity   Float // 用量
-  unit       String  @default("个")
-  notes      String?
+  id            Int     @id @default(autoincrement())
+  productId     Int     // 所属顶层产品
+  parentId      Int?    // 父级BOM项(NULL=根层级)
+  componentType String  // "product" 引用子产品(半成品) / "material" 引用物料
+  componentId   Int     // 被引用对象ID(Product或Material)
+  quantity      Float   // 用量
+  unit          String  @default("个")
+  level         Int     @default(0) // 层级深度(用于前端展示)
+  notes         String?
 
   product  Product  @relation(fields: [productId], references: [id])
-  material Material @relation(fields: [materialId], references: [id])
-
-  @@unique([productId, materialId])
+  parent   BomItem? @relation("BomHierarchy", fields: [parentId], references: [id])
+  children BomItem[] @relation("BomHierarchy")
 }

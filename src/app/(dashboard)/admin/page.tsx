@@ -3,16 +3,20 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { DeleteButton } from "./delete-btn";
+import { canAccessPath } from "@/lib/permissions";
 
 export default async function AdminPage() {
   const session = await auth();
-  if (!session || session.user.role !== "admin") redirect("/");
+  if (!session) redirect("/login");
+  if (!canAccessPath(session.user.role, "/admin")) redirect("/production");
 
   const [users, products, templates] = await Promise.all([
     prisma.user.findMany({
       orderBy: { createdAt: "desc" },
       select: {
         id: true, username: true, name: true, role: true, active: true,
+        workTypeId: true,
+        workType: { select: { id: true, name: true } },
       },
     }),
     prisma.product.findMany({
@@ -66,6 +70,7 @@ export default async function AdminPage() {
                 <th>用户名</th>
                 <th>姓名</th>
                 <th>角色</th>
+                <th>工种</th>
                 <th>状态</th>
                 <th>操作</th>
               </tr>
@@ -84,17 +89,26 @@ export default async function AdminPage() {
                       {roleLabels[u.role] || u.role}
                     </span>
                   </td>
+                  <td className="text-sm text-gray-600">
+                    {(u as any).workType?.name || <span className="text-gray-400">-</span>}
+                  </td>
                   <td>
                     <span className={`status-badge ${u.active ? "status-badge-completed" : "bg-gray-100 text-gray-500"}`}>
                       {u.active ? "正常" : "已禁用"}
                     </span>
                   </td>
                   <td>
-                    {parseInt(session.user.id as string) !== u.id ? (
-                      <DeleteButton id={u.id} apiPath={`/api/users/${u.id}`} />
-                    ) : (
-                      <span className="text-xs text-gray-400">当前用户</span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <Link href={`/admin/users/${u.id}`}
+                        className="text-xs text-blue-600 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg font-medium transition">
+                        编辑
+                      </Link>
+                      {parseInt(session.user.id as string) !== u.id ? (
+                        <DeleteButton id={u.id} apiPath={`/api/users/${u.id}`} />
+                      ) : (
+                        <span className="text-xs text-gray-400">当前用户</span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -128,6 +142,7 @@ export default async function AdminPage() {
                 <th>单位</th>
                 <th>工单数</th>
                 <th>状态</th>
+                <th>BOM</th>
                 <th>操作</th>
               </tr>
             </thead>
@@ -144,6 +159,17 @@ export default async function AdminPage() {
                     </span>
                   </td>
                   <td>
+                    <Link
+                      href={`/admin/products/${p.id}`}
+                      className="text-xs text-blue-500 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg font-medium transition inline-flex items-center gap-1"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                      </svg>
+                      BOM
+                    </Link>
+                  </td>
+                  <td>
                     {p.active ? (
                       <DeleteButton id={p.id} apiPath={`/api/products/${p.id}`} label="停用" />
                     ) : (
@@ -153,21 +179,49 @@ export default async function AdminPage() {
                 </tr>
               ))}
               {products.length === 0 && (
-                <tr><td colSpan={6} className="text-center py-10 text-gray-400">暂无产品</td></tr>
+                <tr><td colSpan={7} className="text-center py-10 text-gray-400">暂无产品</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
 
+      {/* Work Types Section */}
+      <div className="glass-card p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+            <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            工种管理
+          </h3>
+          <Link href="/admin/work-types" className="btn-primary text-sm h-9">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            管理工种
+          </Link>
+        </div>
+        <p className="text-sm text-gray-500">管理生产工种类型，如冲压工、焊接工、装配工等</p>
+      </div>
+
       {/* Process Templates Section */}
       <div className="glass-card p-6">
-        <h3 className="text-base font-bold text-gray-900 mb-5 flex items-center gap-2">
-          <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-          </svg>
-          工艺模板
-        </h3>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+            <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+            工艺模板
+          </h3>
+          <Link href="/admin/templates/new" className="btn-primary text-sm h-9">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            创建工艺模板
+          </Link>
+        </div>
         {templates.length === 0 ? (
           <div className="empty-state py-10">
             <p>暂无工艺模板</p>
@@ -181,9 +235,15 @@ export default async function AdminPage() {
                     <span className="text-xs text-gray-400">{t.product?.code || "-"}</span>
                     <h4 className="font-bold text-gray-900">{t.product?.name || t.name}</h4>
                   </div>
-                  <span className="text-xs text-gray-500 bg-white px-3 py-1 rounded-full shadow-sm">
-                    {t.steps.length} 道工序
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <Link href={`/admin/templates/${t.id}`}
+                      className="text-xs text-emerald-600 hover:bg-emerald-50 px-2.5 py-1.5 rounded-lg font-medium transition">
+                      编辑
+                    </Link>
+                    <span className="text-xs text-gray-500 bg-white px-3 py-1 rounded-full shadow-sm">
+                      {t.steps.length} 道工序
+                    </span>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   {t.steps.map((s, idx) => (

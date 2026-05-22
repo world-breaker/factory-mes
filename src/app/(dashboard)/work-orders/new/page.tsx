@@ -8,6 +8,7 @@ export default function NewWorkOrderPage() {
   const router = useRouter();
   const [products, setProducts] = useState<any[]>([]);
   const [lines, setLines] = useState<any[]>([]);
+  const [workTypes, setWorkTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({
@@ -16,6 +17,7 @@ export default function NewWorkOrderPage() {
     priority: "normal",
     dueDate: "",
     assignedLineId: "",
+    workTypeId: "",
     notes: "",
   });
 
@@ -27,6 +29,10 @@ export default function NewWorkOrderPage() {
     fetch("/api/lines")
       .then((r) => r.json())
       .then(setLines)
+      .catch(() => {});
+    fetch("/api/work-types")
+      .then((r) => r.json())
+      .then(setWorkTypes)
       .catch(() => {});
   }, []);
 
@@ -152,6 +158,20 @@ export default function NewWorkOrderPage() {
               <option value="">不分配</option>
               {lines.map((l: any) => (
                 <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">所需工种</label>
+            <select
+              value={form.workTypeId}
+              onChange={(e) => setForm({ ...form, workTypeId: e.target.value })}
+              className="input-large"
+            >
+              <option value="">不限</option>
+              {workTypes.map((wt: any) => (
+                <option key={wt.id} value={wt.id}>{wt.name} ({wt.code})</option>
               ))}
             </select>
           </div>

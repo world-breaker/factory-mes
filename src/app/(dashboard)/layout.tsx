@@ -80,6 +80,11 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
   const pathname = usePathname();
   const { data: session } = useSession();
 
+  // 操作工只能看到生产看板和车间报工
+  const visibleNavItems = session?.user?.role === "operator"
+    ? navItems.filter((item) => item.href === "/" || item.href === "/production")
+    : navItems;
+
   return (
     <div className={`${collapsed ? "w-[68px]" : "w-64"} bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 text-white flex flex-col transition-all duration-300 relative z-20`}>
       {/* Logo */}
@@ -98,7 +103,7 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
 
       {/* Nav */}
       <nav className="flex-1 py-5 space-y-1 px-2.5">
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
           return (
             <Link
@@ -163,7 +168,10 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const currentNav = navItems.find((item) => item.href === pathname || (item.href !== "/" && pathname.startsWith(item.href)));
+  const operatorNav = session?.user?.role === "operator"
+    ? navItems.filter((item) => item.href === "/" || item.href === "/production")
+    : navItems;
+  const currentNav = operatorNav.find((item) => item.href === pathname || (item.href !== "/" && pathname.startsWith(item.href)));
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-gray-50 to-blue-50/50">

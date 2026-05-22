@@ -35,6 +35,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: user.name,
           username: user.username,
           role: user.role,
+          workTypeId: user.workTypeId,
+          assignedLine: user.assignedLine,
         };
       },
     }),
@@ -45,6 +47,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.id = user.id;
         token.role = (user as any).role;
         token.username = (user as any).username;
+        token.workTypeId = (user as any).workTypeId;
+        token.assignedLine = (user as any).assignedLine;
       }
       return token;
     },
@@ -53,6 +57,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = token.id as string;
         session.user.role = token.role as string;
         session.user.username = token.username as string;
+        session.user.workTypeId = token.workTypeId as number | null;
+        session.user.assignedLine = token.assignedLine as number | null;
       }
       return session;
     },

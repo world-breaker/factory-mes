@@ -13,6 +13,11 @@ export async function GET(request: Request) {
   const where: any = { status };
   if (lineId) where.assignedLineId = parseInt(lineId);
 
+  // Operator: filter by work type
+  if (session.user?.role === "operator" && session.user?.workTypeId) {
+    where.workTypeId = session.user.workTypeId;
+  }
+
   const orders = await prisma.workOrder.findMany({
     where,
     include: {

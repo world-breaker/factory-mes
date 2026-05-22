@@ -21,24 +21,6 @@ async function main() {
   });
   console.log(`Created admin user: ${admin.name}`);
 
-  // Create sample users
-  const operatorPassword = await bcrypt.hash("123456", 10);
-  const users = [
-    { username: "zhang3", password: operatorPassword, name: "张三", role: "operator" as const },
-    { username: "li4", password: operatorPassword, name: "李四", role: "operator" as const },
-    { username: "wang5", password: operatorPassword, name: "王五", role: "operator" as const },
-    { username: "supervisor1", password: operatorPassword, name: "赵班长", role: "supervisor" as const },
-  ];
-
-  for (const u of users) {
-    await prisma.user.upsert({
-      where: { username: u.username },
-      update: {},
-      create: u,
-    });
-  }
-  console.log(`Created ${users.length} sample users`);
-
   // Create production lines
   const lines = [
     { name: "冲压线", code: "LINE01" },
@@ -55,6 +37,50 @@ async function main() {
     });
   }
   console.log(`Created ${lines.length} production lines`);
+
+  // Create work types
+  const workTypes = [
+    { name: "冲压工", code: "WT01", description: "冲压/冲裁操作" },
+    { name: "焊工", code: "WT02", description: "焊接操作" },
+    { name: "装配工", code: "WT03", description: "产品组装" },
+    { name: "表面处理工", code: "WT04", description: "打磨/喷涂/表面处理" },
+    { name: "质检员", code: "WT05", description: "质量检验" },
+  ];
+
+  for (const wt of workTypes) {
+    await prisma.workType.upsert({
+      where: { code: wt.code },
+      update: {},
+      create: wt,
+    });
+  }
+  console.log(`Created ${workTypes.length} work types`);
+
+  // Lookup maps (defined early so users can reference them)
+  const wtList = await prisma.workType.findMany();
+  const lineList = await prisma.productionLine.findMany();
+  const wtByName: Record<string, number> = {};
+  wtList.forEach(wt => { wtByName[wt.name] = wt.id; });
+  const lineByName: Record<string, number> = {};
+  lineList.forEach(l => { lineByName[l.name] = l.id; });
+
+  // Create sample users
+  const operatorPassword = await bcrypt.hash("123456", 10);
+  const users = [
+    { username: "zhang3", password: operatorPassword, name: "张三", role: "operator" as const, workTypeId: wtByName["冲压工"] ?? null, assignedLine: lineByName["冲压线"] ?? null },
+    { username: "li4", password: operatorPassword, name: "李四", role: "operator" as const, workTypeId: wtByName["焊工"] ?? null, assignedLine: lineByName["焊接线"] ?? null },
+    { username: "wang5", password: operatorPassword, name: "王五", role: "operator" as const, workTypeId: wtByName["装配工"] ?? null, assignedLine: lineByName["组装线"] ?? null },
+    { username: "supervisor1", password: operatorPassword, name: "赵班长", role: "supervisor" as const },
+  ];
+
+  for (const u of users) {
+    await prisma.user.upsert({
+      where: { username: u.username },
+      update: { workTypeId: u.workTypeId ?? undefined, assignedLine: u.assignedLine ?? undefined },
+      create: u,
+    });
+  }
+  console.log(`Created ${users.length} sample users`);
 
   // Create sample materials
   const materials = [

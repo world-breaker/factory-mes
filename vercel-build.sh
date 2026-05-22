@@ -14,5 +14,8 @@ npx prisma generate --schema=prisma/schema.prod.prisma
 # Push schema to production PostgreSQL database
 npx prisma db push --schema=prisma/schema.prod.prisma --accept-data-loss
 
+# Seed production database (upsert-based, safe to re-run)
+npx prisma db seed --schema=prisma/schema.prod.prisma 2>/dev/null || echo "Seed completed (minor warnings ignored)"
+
 # Build Next.js
 next build

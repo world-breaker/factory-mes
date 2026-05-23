@@ -10,7 +10,7 @@ export default async function AdminPage() {
   if (!session) redirect("/login");
   if (!canAccessPath(session.user.role, "/admin")) redirect("/production");
 
-  const [users, products, templates] = await Promise.all([
+  const [users, templates] = await Promise.all([
     prisma.user.findMany({
       orderBy: { createdAt: "desc" },
       select: {
@@ -18,10 +18,6 @@ export default async function AdminPage() {
         workTypeId: true,
         workType: { select: { id: true, name: true } },
       },
-    }),
-    prisma.product.findMany({
-      include: { _count: { select: { workOrders: true } } },
-      orderBy: { createdAt: "desc" },
     }),
     prisma.processTemplate.findMany({
       include: {
@@ -126,64 +122,14 @@ export default async function AdminPage() {
             </svg>
             产品管理
           </h3>
-          <Link href="/admin/products/new" className="btn-primary text-sm h-9">
+          <Link href="/admin/products" className="btn-primary text-sm h-9">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
-            添加产品
+            管理产品
           </Link>
         </div>
-        <div className="overflow-x-auto">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>编码</th>
-                <th>名称</th>
-                <th>单位</th>
-                <th>工单数</th>
-                <th>状态</th>
-                <th>BOM</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((p) => (
-                <tr key={p.id}>
-                  <td className="font-mono text-xs text-gray-500">{p.code}</td>
-                  <td className="font-medium text-gray-900">{p.name}</td>
-                  <td className="text-gray-500">{p.unit}</td>
-                  <td className="font-medium">{p._count.workOrders}</td>
-                  <td>
-                    <span className={`status-badge ${p.active ? "status-badge-completed" : "bg-gray-100 text-gray-500"}`}>
-                      {p.active ? "启用" : "停用"}
-                    </span>
-                  </td>
-                  <td>
-                    <Link
-                      href={`/admin/products/${p.id}`}
-                      className="text-xs text-blue-500 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg font-medium transition inline-flex items-center gap-1"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                      </svg>
-                      BOM
-                    </Link>
-                  </td>
-                  <td>
-                    {p.active ? (
-                      <DeleteButton id={p.id} apiPath={`/api/products/${p.id}`} label="停用" />
-                    ) : (
-                      <span className="text-xs text-gray-400">已停用</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {products.length === 0 && (
-                <tr><td colSpan={7} className="text-center py-10 text-gray-400">暂无产品</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <p className="text-sm text-gray-500">管理产品信息、BOM物料清单（支持无限层级结构）、以及产品启用/停用</p>
       </div>
 
       {/* Work Types Section */}

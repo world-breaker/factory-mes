@@ -360,32 +360,25 @@ export default function InventoryPage() {
 function RecordsView() {
   const [records, setRecords] = useState<any[]>([]);
   const [filter, setFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetch("/api/inventory")
+  const fetchRecords = (type: string) => {
+    setLoading(true);
+    const url = type === "all" ? "/api/material-records" : `/api/material-records?type=${type}`;
+    fetch(url)
       .then((r) => r.json())
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0 && data[0].records) {
-          setRecords(data[0].records);
-        }
+        setRecords(Array.isArray(data) ? data : []);
+        setLoading(false);
       })
-      .catch(() => {});
-  }, []);
+      .catch(() => setLoading(false));
+  };
 
-  // Fallback: load from inventory endpoint and combine
   useEffect(() => {
-    fetch(`/api/inventory?type=${filter !== "all" ? filter : ""}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          const allRecords = data.flatMap((i: any) => i.records || []);
-          setRecords(allRecords);
-        }
-      })
-      .catch(() => {});
+    fetchRecords(filter);
   }, [filter]);
 
-  const filtered = filter === "all" ? records : records.filter((r: any) => r.type === filter);
+  const filtered = records;
 
   return (
     <div className="glass-card overflow-hidden">
@@ -407,14 +400,16 @@ function RecordsView() {
               <th>物料</th>
               <th>数量</th>
               <th>批号</th>
-              <th>操作人</th>
+              <th>备注</th>
               <th>时间</th>
               <th>操作</th>
             </tr>
           </thead>
           <tbody>
-              {filtered.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-16 text-gray-400">暂无记录</td></tr>
+              {loading ? (
+                <tr><td colSpan={7} className="text-center py-16 text-gray-400">加载中...</td></tr>
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan={7} className="text-center py-16 text-gray-400">暂无记录，请先进行入库或出库操作</td></tr>
               ) : (
                 filtered.map((r: any) => (
                   <tr key={r.id}>
@@ -428,7 +423,7 @@ function RecordsView() {
                       {r.type === "in" ? "+" : "-"}{r.quantity}
                     </td>
                     <td className="text-gray-400 text-xs">{r.batchNo || "-"}</td>
-                    <td className="text-gray-600">{r.operator?.name || "-"}</td>
+                    <td className="text-gray-500 text-xs max-w-[120px] truncate">{r.notes || "-"}</td>
                     <td className="text-gray-400 text-xs">{new Date(r.createdAt).toLocaleString("zh-CN")}</td>
                     <td>
                       <button

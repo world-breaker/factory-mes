@@ -82,7 +82,7 @@ export default async function ProductsPage() {
                           >
                             BOM
                           </Link>
-                          <DeleteButton id={p.id} apiPath={`/api/products/${p.id}`} label="删除" confirmMsg="确认停用该产品？如有工单关联将无法新建" />
+                          <DeleteButton id={p.id} apiPath={`/api/products/${p.id}?hard=true`} label="删除" confirmMsg="确认永久删除该产品？BOM和工艺模板将一并删除。" />
                         </>
                       ) : (
                         <RestoreButton id={p.id} />

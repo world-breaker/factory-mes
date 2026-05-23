@@ -40,12 +40,14 @@ export default function WorkTypesPage() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("确认删除该工种？")) return;
+  const handleDelete = async (id: number, hard = false) => {
+    if (!confirm(hard ? "确认永久删除？" : "确认删除该工种？有分配用户时将自动停用。")) return;
     try {
-      const res = await fetch(`/api/work-types/${id}`, { method: "DELETE" });
+      const url = hard ? `/api/work-types/${id}?hard=true` : `/api/work-types/${id}`;
+      const res = await fetch(url, { method: "DELETE" });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "操作失败");
+      if (!res.ok) throw new Error(data.message || data.error || "操作失败");
+      if (data.message) alert(data.message);
       router.refresh();
       fetchWorkTypes();
     } catch (err) {
@@ -122,10 +124,18 @@ export default function WorkTypesPage() {
                           onClick={() => handleDelete(wt.id)}
                           className="text-xs text-red-500 hover:bg-red-50 px-2.5 py-1.5 rounded-lg font-medium transition"
                         >
-                          停用
+                          删除
                         </button>
                       ) : (
-                        <span className="text-xs text-gray-400">已停用</span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-gray-400">已停用</span>
+                          <button
+                            onClick={() => handleDelete(wt.id, true)}
+                            className="text-xs text-red-600 hover:bg-red-100 px-2 py-1 rounded font-medium transition"
+                          >
+                            彻底删除
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>

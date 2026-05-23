@@ -186,6 +186,7 @@ export default async function AdminPage() {
                       className="text-xs text-emerald-600 hover:bg-emerald-50 px-2.5 py-1.5 rounded-lg font-medium transition">
                       编辑
                     </Link>
+                    <DeleteButton id={t.id} apiPath={`/api/process-templates/${t.id}?hard=true`} label="删除" confirmMsg="确认删除该工艺模板？所有工序将被一并删除。" />
                     <span className="text-xs text-gray-500 bg-white px-3 py-1 rounded-full shadow-sm">
                       {t.steps.length} 道工序
                     </span>

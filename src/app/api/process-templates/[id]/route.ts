@@ -92,7 +92,7 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
@@ -102,12 +102,23 @@ export async function DELETE(
 
   const { id } = await params;
   const templateId = parseInt(id);
+  const url = new URL(request.url);
+  const hard = url.searchParams.get("hard") === "true";
 
   const template = await prisma.processTemplate.findUnique({
     where: { id: templateId },
+    include: { _count: { select: { steps: true } } },
   });
   if (!template) {
     return NextResponse.json({ error: "工艺模板不存在" }, { status: 404 });
+  }
+
+  if (hard) {
+    await prisma.$transaction([
+      prisma.processStep.deleteMany({ where: { templateId } }),
+      prisma.processTemplate.delete({ where: { id: templateId } }),
+    ]);
+    return NextResponse.json({ success: true, deleted: true });
   }
 
   // Soft delete

@@ -58,7 +58,7 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
@@ -68,12 +68,26 @@ export async function DELETE(
 
   const { id } = await params;
   const productId = parseInt(id);
+  const url = new URL(request.url);
+  const hard = url.searchParams.get("hard") === "true";
 
   const product = await prisma.product.findUnique({
     where: { id: productId },
+    include: { _count: { select: { workOrders: true, bomItems: true, templates: true } } },
   });
   if (!product) {
     return NextResponse.json({ error: "产品不存在" }, { status: 404 });
+  }
+
+  if (hard) {
+    // Hard delete: delete BOM tree, templates with steps, then product
+    await prisma.$transaction([
+      prisma.bomItem.deleteMany({ where: { productId } }),
+      prisma.processStep.deleteMany({ where: { template: { productId } } }),
+      prisma.processTemplate.deleteMany({ where: { productId } }),
+      prisma.product.delete({ where: { id: productId } }),
+    ]);
+    return NextResponse.json({ success: true, deleted: true });
   }
 
   // Soft delete - set active to false

@@ -199,16 +199,16 @@ export default function InventoryPage() {
                             </button>
                             <button
                               onClick={async () => {
-                                if (!confirm("确认停用此物料？")) return;
+                                if (!confirm(`确认删除物料「${item.material?.name}」？所有库存和出入库记录将被永久删除。`)) return;
                                 try {
-                                  const res = await fetch(`/api/materials/${item.materialId}`, { method: "DELETE" });
+                                  const res = await fetch(`/api/materials/${item.materialId}?hard=true`, { method: "DELETE" });
                                   if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
                                   fetchData();
                                 } catch (err: any) { alert("操作失败: " + err.message); }
                               }}
                               className="text-xs text-red-500 hover:bg-red-50 px-2.5 py-1.5 rounded-lg font-medium transition"
                             >
-                              停用
+                              删除
                             </button>
                           </div>
                         </td>

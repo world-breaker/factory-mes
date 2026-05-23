@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
@@ -13,8 +13,9 @@ export async function DELETE(
 
   const { id } = await params;
   const workTypeId = parseInt(id);
+  const url = new URL(request.url);
+  const hard = url.searchParams.get("hard") === "true";
 
-  // Check if work type exists
   const workType = await prisma.workType.findUnique({
     where: { id: workTypeId },
   });
@@ -22,13 +23,20 @@ export async function DELETE(
     return NextResponse.json({ error: "工种不存在" }, { status: 404 });
   }
 
+  if (hard) {
+    // Force hard delete — unassign users first, then delete
+    await prisma.$transaction([
+      prisma.user.updateMany({ where: { workTypeId }, data: { workTypeId: null } }),
+      prisma.workOrder.updateMany({ where: { workTypeId }, data: { workTypeId: null } }),
+      prisma.workType.delete({ where: { id: workTypeId } }),
+    ]);
+    return NextResponse.json({ success: true, deleted: true });
+  }
+
   // Check if work type has users assigned
-  const userCount = await prisma.user.count({
-    where: { workTypeId },
-  });
+  const userCount = await prisma.user.count({ where: { workTypeId } });
 
   if (userCount > 0) {
-    // Soft disable instead of hard delete
     await prisma.workType.update({
       where: { id: workTypeId },
       data: { active: false },

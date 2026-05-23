@@ -59,10 +59,26 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
+  const orderId = parseInt(id);
+  const url = new URL(request.url);
+  const hard = url.searchParams.get("hard") === "true";
+
+  if (hard) {
+    // Hard delete: cascade delete related records, then the work order itself
+    await prisma.$transaction([
+      prisma.qualityRecord.deleteMany({ where: { workOrderId: orderId } }),
+      prisma.productionRecord.deleteMany({ where: { workOrderId: orderId } }),
+      prisma.materialRecord.deleteMany({ where: { workOrderId: orderId } }),
+      prisma.workOrderProcess.deleteMany({ where: { workOrderId: orderId } }),
+      prisma.workOrder.delete({ where: { id: orderId } }),
+    ]);
+    return NextResponse.json({ success: true, deleted: true });
+  }
+
+  // Soft delete: mark as cancelled
   await prisma.workOrder.update({
-    where: { id: parseInt(id) },
+    where: { id: orderId },
     data: { status: "cancelled" },
   });
-
   return NextResponse.json({ success: true });
 }

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import Link from "next/link";
-import { CancelWorkOrderButton } from "./[id]/cancel-btn";
+import { WorkOrderActionButton } from "./[id]/cancel-btn";
 
 const statusLabels: Record<string, string> = {
   pending: "待生产",
@@ -128,7 +128,7 @@ export default async function WorkOrdersPage({
                       <span className={`status-badge status-badge-${order.status}`}>
                         {statusLabels[order.status] || order.status}
                       </span>
-                      <CancelWorkOrderButton workOrderId={order.id} status={order.status} />
+                      <WorkOrderActionButton workOrderId={order.id} status={order.status} />
                     </div>
                     <p className="text-sm text-gray-500 mt-1">
                       {order.product.name}

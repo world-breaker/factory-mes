@@ -409,29 +409,45 @@ function RecordsView() {
               <th>批号</th>
               <th>操作人</th>
               <th>时间</th>
+              <th>操作</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
-              <tr><td colSpan={6} className="text-center py-16 text-gray-400">暂无记录</td></tr>
-            ) : (
-              filtered.map((r: any) => (
-                <tr key={r.id}>
-                  <td>
-                    <span className={`status-badge ${r.type === "in" ? "bg-green-50 text-green-600" : "bg-amber-50 text-amber-600"}`}>
-                      {r.type === "in" ? "入库" : "出库"}
-                    </span>
-                  </td>
-                  <td className="font-medium">{r.material?.name || "-"}</td>
-                  <td className={`font-bold ${r.type === "in" ? "text-green-600" : "text-amber-600"}`}>
-                    {r.type === "in" ? "+" : "-"}{r.quantity}
-                  </td>
-                  <td className="text-gray-400 text-xs">{r.batchNo || "-"}</td>
-                  <td className="text-gray-600">{r.operator?.name || "-"}</td>
-                  <td className="text-gray-400 text-xs">{new Date(r.createdAt).toLocaleString("zh-CN")}</td>
-                </tr>
-              ))
-            )}
+              {filtered.length === 0 ? (
+                <tr><td colSpan={7} className="text-center py-16 text-gray-400">暂无记录</td></tr>
+              ) : (
+                filtered.map((r: any) => (
+                  <tr key={r.id}>
+                    <td>
+                      <span className={`status-badge ${r.type === "in" ? "bg-green-50 text-green-600" : "bg-amber-50 text-amber-600"}`}>
+                        {r.type === "in" ? "入库" : "出库"}
+                      </span>
+                    </td>
+                    <td className="font-medium">{r.material?.name || "-"}</td>
+                    <td className={`font-bold ${r.type === "in" ? "text-green-600" : "text-amber-600"}`}>
+                      {r.type === "in" ? "+" : "-"}{r.quantity}
+                    </td>
+                    <td className="text-gray-400 text-xs">{r.batchNo || "-"}</td>
+                    <td className="text-gray-600">{r.operator?.name || "-"}</td>
+                    <td className="text-gray-400 text-xs">{new Date(r.createdAt).toLocaleString("zh-CN")}</td>
+                    <td>
+                      <button
+                        onClick={async () => {
+                          if (!confirm("确认删除该出入库记录？库存数量将被还原。")) return;
+                          try {
+                            const res = await fetch(`/api/inventory/${r.id}`, { method: "DELETE" });
+                            if (!res.ok) { const d = await res.json(); throw new Error(d.error || "删除失败"); }
+                            setRecords(records.filter((rec: any) => rec.id !== r.id));
+                          } catch (err: any) { alert("操作失败: " + err.message); }
+                        }}
+                        className="text-xs text-red-500 hover:bg-red-50 px-2.5 py-1.5 rounded-lg font-medium transition"
+                      >
+                        删除
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
           </tbody>
         </table>
       </div>

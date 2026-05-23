@@ -21,6 +21,20 @@ export async function DELETE(
     return NextResponse.json({ error: "出入库记录不存在" }, { status: 404 });
   }
 
+  // Revert inventory: if it was an "in", decrement; if "out", increment
+  if (record.materialId) {
+    const inventory = await prisma.inventory.findFirst({
+      where: { materialId: record.materialId },
+    });
+    if (inventory) {
+      const revertQty = record.type === "in" ? -record.quantity : record.quantity;
+      await prisma.inventory.update({
+        where: { id: inventory.id },
+        data: { quantity: { increment: revertQty } },
+      });
+    }
+  }
+
   await prisma.materialRecord.delete({ where: { id: recordId } });
 
   return NextResponse.json({ success: true });

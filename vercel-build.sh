@@ -12,15 +12,9 @@ sed -i 's|provider = "sqlite"|provider = "postgresql"|' prisma/schema.prod.prism
 npx prisma generate --schema=prisma/schema.prod.prisma
 
 # Push schema to production PostgreSQL database
-echo "--- Running prisma db push ---"
 npx prisma db push --schema=prisma/schema.prod.prisma --accept-data-loss 2>&1
 
-# Clean up old random test data (only affects generated test data, not base seed)
-echo "--- Cleaning up test data ---"
-npx tsx prisma/cleanup-build.ts 2>&1 || echo "Cleanup skipped (may already be clean)"
-
 # Seed production database (upsert-based, safe to re-run)
-echo "--- Running prisma db seed ---"
 npx prisma db seed --schema=prisma/schema.prod.prisma 2>&1 || echo "Seed completed (warnings ignored)"
 
 # Build Next.js

@@ -24,9 +24,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "名称和编码为必填项" }, { status: 400 });
     }
 
-    const existing = await prisma.material.findUnique({ where: { code } });
-    if (existing) {
+    const existingCode = await prisma.material.findUnique({ where: { code } });
+    if (existingCode) {
       return NextResponse.json({ error: "物料编码已存在" }, { status: 400 });
+    }
+
+    const existingName = await prisma.material.findFirst({
+      where: { name, active: true },
+    });
+    if (existingName) {
+      return NextResponse.json({ error: "物料名称已存在" }, { status: 400 });
     }
 
     const material = await prisma.material.create({

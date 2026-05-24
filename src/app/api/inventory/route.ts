@@ -41,22 +41,21 @@ export async function POST(request: Request) {
       },
     });
 
-    // Update or create inventory
+    // Update or create inventory — match by materialId only, batchNo goes in the record
     const existing = await prisma.inventory.findFirst({
-      where: { materialId: matId, batchNo: batchNo || undefined },
+      where: { materialId: matId },
     });
 
     if (existing) {
       await prisma.inventory.update({
         where: { id: existing.id },
-        data: { quantity: { increment: qty } },
+        data: { quantity: { increment: qty }, location: location || existing.location },
       });
     } else {
       await prisma.inventory.create({
         data: {
           materialId: matId,
           quantity: qty,
-          batchNo: batchNo || null,
           location: location || null,
         },
       });

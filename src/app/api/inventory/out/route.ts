@@ -17,16 +17,17 @@ export async function POST(request: Request) {
     const qty = parseFloat(quantity);
     const matId = parseInt(materialId);
 
-    // Check inventory
-    const inv = await prisma.inventory.findFirst({
-      where: { materialId: matId, batchNo: batchNo || undefined },
+    // Check inventory — sum all entries for this material (ignore batchNo)
+    const allInv = await prisma.inventory.findMany({
+      where: { materialId: matId },
     });
+    const totalQty = allInv.reduce((sum, inv) => sum + inv.quantity, 0);
 
-    if (!inv || inv.quantity < qty) {
+    if (totalQty < qty) {
       return NextResponse.json({ error: "库存不足" }, { status: 400 });
     }
 
-    // Create record
+    // Create record (batchNo recorded here, not on inventory)
     await prisma.materialRecord.create({
       data: {
         materialId: matId,
@@ -39,9 +40,9 @@ export async function POST(request: Request) {
       },
     });
 
-    // Update inventory
+    // Deduct from first inventory entry
     await prisma.inventory.update({
-      where: { id: inv.id },
+      where: { id: allInv[0].id },
       data: { quantity: { decrement: qty } },
     });
 
